@@ -3,6 +3,7 @@ import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Language } from '../types';
 
 interface VoiceInterfaceProps {
+  text?: string;
   isListening: boolean;
   onListeningChange: (listening: boolean) => void;
   onVoiceInput: (transcript: string) => void;
@@ -25,11 +26,12 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   useEffect(() => {
     // Check for speech recognition support
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       setHasAudioSupport(false);
       return;
     }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     // Initialize speech recognition
     const recognition = new SpeechRecognition();
@@ -95,8 +97,39 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
     onListeningChange(false);
   };
 
-  const speakText = (text: string) => {
-    if (!synthRef.current) return;
+  const speakText = async (text: string) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          lang: selectedLanguage.code
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('TTS request failed');
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      setIsSpeaking(true);
+      audio.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+      
+      await audio.play();
+    } catch (error) {
+      console.error('Error in text-to-speech:', error);
+      setIsSpeaking(false);
+    }
+  };
 
     synthRef.current.cancel();
     

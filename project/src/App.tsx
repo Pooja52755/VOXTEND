@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Volume2, Users, FileText, HelpCircle, Globe, Phone, Sparkles } from 'lucide-react';
-import VoiceInterface from './components/VoiceInterface';
-import WelfareSchemes from './components/WelfareSchemes';
+import React, { useState, useEffect } from 'react';
+import { Volume2, Globe, FileText, Sparkles } from 'lucide-react';
+import VoiceInterfaceEnhanced from './components/VoiceInterfaceEnhanced';
+import CategorizedSchemes from './components/CategorizedSchemes';
+import MeeSevaCentersMap from './components/MeeSevaCentersMap';
 import LanguageSelector from './components/LanguageSelector';
 import StatusIndicator from './components/StatusIndicator';
 import DocumentViewer from './components/DocumentViewer';
@@ -11,6 +12,7 @@ import { Language, WelfareScheme } from './types';
 import { welfareSchemes } from './data/schemes';
 import { languages } from './data/languages';
 import { processUserQuery, detectLanguage } from './utils/aiProcessor';
+import TabView from './components/TabView';
 
 function App() {
   const [isListening, setIsListening] = useState(false);
@@ -131,152 +133,52 @@ function App() {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Voice Interface */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-6 border border-white/20">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                  {selectedLanguage.code === 'hi' ? 'अपनी आवाज़ से सवाल पूछें' : 
-                   selectedLanguage.code === 'te' ? 'మీ వాయిస్‌తో ప్రశ్నలు అడగండి' :
-                   'Ask Questions with Your Voice'}
-                </h2>
-                <p className="text-gray-600 text-lg">
-                  {selectedLanguage.code === 'hi' ? 'माइक्रोफोन बटन दबाकर बोलना शुरू करें' :
-                   selectedLanguage.code === 'te' ? 'మైక్రోఫోన్ బటన్ నొక్కి మాట్లాడడం ప్రారంభించండి' :
-                   'Press the microphone button and start speaking'}
-                </p>
-              </div>
+        <TabView
+          isListening={isListening}
+          onListeningChange={setIsListening}
+          onVoiceInput={handleVoiceInput}
+          selectedLanguage={selectedLanguage}
+          isProcessing={isProcessing}
+          responseText={conversation.length > 0 ? conversation[conversation.length - 1].text : undefined}
+          schemes={welfareSchemes}
+          onSchemeSelect={(scheme) => {setSelectedSchemeForDetails(scheme); setShowSchemeDetails(true);}}
+          conversation={conversation}
+        />
 
-              <VoiceInterface
-                isListening={isListening}
-                onListeningChange={setIsListening}
-                onVoiceInput={handleVoiceInput}
-                selectedLanguage={selectedLanguage}
-                isProcessing={isProcessing}
-              />
+        {/* Modals */}
+        {showDocuments && (
+          <DocumentViewer
+            documents={currentScheme?.documents || []}
+            selectedLanguage={selectedLanguage}
+            onClose={() => setShowDocuments(false)}
+          />
+        )}
 
-              <StatusIndicator 
-                isListening={isListening}
-                isProcessing={isProcessing}
-                selectedLanguage={selectedLanguage}
-              />
-            </div>
+        {showProcess && (
+          <ApplicationProcess
+            processSteps={currentScheme?.applicationProcess || []}
+            selectedLanguage={selectedLanguage}
+            onClose={() => setShowProcess(false)}
+          />
+        )}
 
-            {/* Conversation History */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
-              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                <FileText className="w-5 h-5 mr-2 text-orange-600" />
-                {selectedLanguage.code === 'hi' ? 'बातचीत का इतिहास' :
-                 selectedLanguage.code === 'te' ? 'సంభాషణ చరిత్ర' :
-                 'Conversation History'}
-              </h3>
-              <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                {conversation.map((message, index) => (
-                  <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md ${
-                      message.type === 'user' 
-                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white' 
-                        : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
-                    }`}>
-                      <p className="text-sm leading-relaxed">{message.text}</p>
-                      <p className="text-xs opacity-75 mt-2">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Access Features */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
-              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-                <HelpCircle className="w-5 h-5 mr-2 text-green-600" />
-                {selectedLanguage.code === 'hi' ? 'त्वरित सहायता' :
-                 selectedLanguage.code === 'te' ? 'త్వరిత సహాయం' :
-                 'Quick Help'}
-              </h3>
-              <div className="space-y-4">
-                <button 
-                  onClick={() => setShowDocuments(true)}
-                  className="w-full text-left p-4 bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 rounded-xl transition-all duration-300 border border-orange-200 hover:shadow-md"
-                >
-                  <div className="flex items-center">
-                    <FileText className="w-5 h-5 mr-3 text-orange-600" />
-                    <span className="font-medium text-gray-800">
-                      {selectedLanguage.code === 'hi' ? 'आवश्यक दस्तावेज़' :
-                       selectedLanguage.code === 'te' ? 'అవసరమైన పత్రాలు' :
-                       'Required Documents'}
-                    </span>
-                  </div>
-                </button>
-                <button 
-                  onClick={() => setShowProcess(true)}
-                  className="w-full text-left p-4 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-xl transition-all duration-300 border border-green-200 hover:shadow-md"
-                >
-                  <div className="flex items-center">
-                    <Users className="w-5 h-5 mr-3 text-green-600" />
-                    <span className="font-medium text-gray-800">
-                      {selectedLanguage.code === 'hi' ? 'आवेदन प्रक्रिया' :
-                       selectedLanguage.code === 'te' ? 'దరఖాస్తు ప్రక్రియ' :
-                       'Application Process'}
-                    </span>
-                  </div>
-                </button>
-                <button className="w-full text-left p-4 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-xl transition-all duration-300 border border-blue-200 hover:shadow-md">
-                  <div className="flex items-center">
-                    <Users className="w-5 h-5 mr-3 text-blue-600" />
-                    <span className="font-medium text-gray-800">
-                      {selectedLanguage.code === 'hi' ? 'पात्रता जांचें' :
-                       selectedLanguage.code === 'te' ? 'అర్హత తనిఖీ చేయండి' :
-                       'Check Eligibility'}
-                    </span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Current Scheme Details */}
-            {currentScheme && (
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">
-                  {selectedLanguage.code === 'hi' ? 'वर्तमान योजना' :
-                   selectedLanguage.code === 'te' ? 'ప్రస్తుత పథకం' :
-                   'Current Scheme'}
-                </h3>
-                <div className="space-y-3">
-                  <h4 className="font-bold text-orange-600 text-lg">{currentScheme.name}</h4>
-                  <p className="text-gray-600 leading-relaxed">{currentScheme.description}</p>
-                  <div className="text-xs text-gray-500">
-                    <strong>
-                      {selectedLanguage.code === 'hi' ? 'लक्षित समूह: ' :
-                       selectedLanguage.code === 'te' ? 'లక్ష్య సమూహం: ' :
-                       'Target Group: '}
-                    </strong>
-                    {currentScheme.targetGroup}
-                  </div>
-                  <button 
-                    onClick={() => {setSelectedSchemeForDetails(currentScheme); setShowSchemeDetails(true);}}
-                    className="mt-4 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors text-sm font-medium"
-                  >
-                    {selectedLanguage.code === 'hi' ? 'पूरा विवरण देखें' : selectedLanguage.code === 'te' ? 'పూర్తి వివరాలు చూడండి' : 'View Full Details'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Popular Schemes */}
-            <WelfareSchemes 
-              schemes={welfareSchemes.slice(0, 5)}
-              selectedLanguage={selectedLanguage}
-              onSchemeSelect={(scheme) => {setSelectedSchemeForDetails(scheme); setShowSchemeDetails(true);}}
-            />
-          </div>
-        </div>
+        {showSchemeDetails && selectedSchemeForDetails && (
+          <SchemeDetails
+            scheme={selectedSchemeForDetails}
+            selectedLanguage={selectedLanguage}
+            onClose={() => {setShowSchemeDetails(false); setSelectedSchemeForDetails(null);}}
+            onViewDocuments={() => {
+              setShowSchemeDetails(false);
+              setCurrentScheme(selectedSchemeForDetails);
+              setShowDocuments(true);
+            }}
+            onViewProcess={() => {
+              setShowSchemeDetails(false);
+              setCurrentScheme(selectedSchemeForDetails);
+              setShowProcess(true);
+            }}
+          />
+        )}
       </div>
 
       {/* Footer */}
@@ -301,41 +203,6 @@ function App() {
           </div>
         </div>
       </footer>
-
-      {/* Modals */}
-      {showDocuments && (
-        <DocumentViewer
-          documents={currentScheme?.documents || []}
-          selectedLanguage={selectedLanguage}
-          onClose={() => setShowDocuments(false)}
-        />
-      )}
-
-      {showProcess && (
-        <ApplicationProcess
-          processSteps={currentScheme?.applicationProcess || []}
-          selectedLanguage={selectedLanguage}
-          onClose={() => setShowProcess(false)}
-        />
-      )}
-
-      {showSchemeDetails && selectedSchemeForDetails && (
-        <SchemeDetails
-          scheme={selectedSchemeForDetails}
-          selectedLanguage={selectedLanguage}
-          onClose={() => {setShowSchemeDetails(false); setSelectedSchemeForDetails(null);}}
-          onViewDocuments={() => {
-            setShowSchemeDetails(false);
-            setCurrentScheme(selectedSchemeForDetails);
-            setShowDocuments(true);
-          }}
-          onViewProcess={() => {
-            setShowSchemeDetails(false);
-            setCurrentScheme(selectedSchemeForDetails);
-            setShowProcess(true);
-          }}
-        />
-      )}
     </div>
   );
 }
