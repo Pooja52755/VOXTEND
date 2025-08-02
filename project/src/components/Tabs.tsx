@@ -1,6 +1,18 @@
-import React from 'react'
+import React from 'react';
 
-const Tabs = ({ activeTab, onChange, tabs }) => {
+interface Tab {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+interface TabsProps {
+  activeTab: string;
+  onChange: (tabId: string) => void;
+  tabs: Tab[];
+}
+
+const Tabs: React.FC<TabsProps> = ({ activeTab, onChange, tabs }) => {
   return (
     <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm shadow-lg border-b border-gray-200/50 -mx-4 px-4 py-2">
       <div className="flex space-x-1">

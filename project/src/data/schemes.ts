@@ -15,18 +15,17 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: '₹6,000 per year (₹2,000 every 4 months)',
     documents: [
-      'Aadhaar Card',
-      'Bank Account Details',
-      'Land Records (Khata/Khesra)',
-      'Citizenship Certificate'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'PAN Card', url: '/documents/pan_card.png' },
+        { name: 'Income Certificate', url: '/documents/income_certificate.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Visit PM-KISAN portal or CSC center',
       'Fill application form with personal details',
       'Upload required documents',
       'Submit and get registration number'
     ],
-    contactInfo: 'Helpline: 155261 | Website: pmkisan.gov.in',
+    contact: { name: 'PM-KISAN Helpdesk', number: '155261', email: 'pmkisan-ict@gov.in' },
     keywords: ['farmer', 'agriculture', 'income support', 'pm kisan', 'kisan samman']
   },
   {
@@ -43,18 +42,16 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: 'Health coverage up to ₹5 lakh per family per year',
     documents: [
-      'Aadhaar Card',
-      'Ration Card',
-      'Mobile Number',
-      'Family ID (if available)'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'PAN Card', url: '/documents/pan_card.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Check eligibility on official website',
       'Visit empaneled hospital',
       'Get Golden Card issued',
       'Avail cashless treatment'
     ],
-    contactInfo: 'Toll-free: 14555 | Website: pmjay.gov.in',
+    contact: { name: 'Ayushman Bharat Helpdesk', number: '14555', email: 'support@pmjay.gov.in' },
     keywords: ['health', 'insurance', 'ayushman', 'medical', 'treatment', 'hospital']
   },
   {
@@ -71,19 +68,16 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: 'Free LPG connection with deposit-free cylinder and regulator',
     documents: [
-      'BPL Ration Card',
-      'Aadhaar Card of woman',
-      'Bank Account Details',
-      'Photo of applicant',
-      'Address Proof'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'Caste Certificate', url: '/documents/caste_certificate.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Visit nearest LPG distributor',
       'Fill PMUY application form',
       'Submit required documents',
       'Get connection within 10-15 days'
     ],
-    contactInfo: 'Helpline: 1906 | Website: pmuy.gov.in',
+    contact: { name: 'Ujjwala Yojana Helpline', number: '1906', email: 'support@pmuy.gov.in' },
     keywords: ['lpg', 'gas', 'ujjwala', 'cooking', 'women', 'connection']
   },
   {
@@ -100,18 +94,15 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: '₹12,000 incentive for toilet construction',
     documents: [
-      'Aadhaar Card',
-      'Bank Account Details',
-      'Photo of house',
-      'Certificate from Gram Panchayat'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Apply through Gram Panchayat',
       'Get name included in beneficiary list',
       'Construct toilet as per guidelines',
       'Get verification and receive incentive'
     ],
-    contactInfo: 'Website: swachhbharatmission.gov.in',
+    contact: { name: 'Swachh Bharat Mission', email: 'support@sbm.gov.in' },
     keywords: ['toilet', 'sanitation', 'swachh bharat', 'hygiene', 'rural']
   },
   {
@@ -119,28 +110,25 @@ export const welfareSchemes: WelfareScheme[] = [
     name: 'Pradhan Mantri Awaas Yojana - Gramin (PMAY-G)',
     description: 'Housing scheme for rural poor providing assistance for house construction',
     category: 'Housing',
-    targetGroup: 'Homeless and houseless families in rural areas',
+    targetGroup: 'Rural poor households without a pucca house',
     eligibilityDetails: [
-      'Families in SECC 2011 list',
-      'No pucca house owned',
-      'No family member in government job',
-      'Annual income criteria as per guidelines'
+      'Houseless or living in kutcha house',
+      'Family should not own a pucca house',
+      'Selection based on SECC 2011 data',
+      'Land ownership or government allotment'
     ],
-    benefits: '₹1.20 lakh in plains, ₹1.30 lakh in hilly states',
+    benefits: 'Financial assistance for house construction up to ₹1.2 lakh (plains) / ₹1.3 lakh (hilly areas)',
     documents: [
-      'Aadhaar Card',
-      'Bank Account Details',
-      'Income Certificate',
-      'Land Documents',
-      'Caste Certificate (if applicable)'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'Income Certificate', url: '/documents/income_certificate.png' },
     ],
-    applicationProcess: [
-      'Apply through Gram Panchayat',
-      'Technical sanction from Block office',
+    howToApply: [
+      'Registration through Gram Sabha',
+      'Verification of beneficiaries',
       'Construction in phases',
       'Payment in installments on completion'
     ],
-    contactInfo: 'Website: pmayg.nic.in',
+    contact: { name: 'PMAY-G Helpdesk', email: 'support@pmayg.nic.in' },
     keywords: ['house', 'housing', 'pmay', 'construction', 'rural', 'shelter']
   },
   {
@@ -151,25 +139,22 @@ export const welfareSchemes: WelfareScheme[] = [
     targetGroup: 'All unbanked citizens',
     eligibilityDetails: [
       'Indian citizen',
-      'Age 10 years and above',
-      'No existing bank account',
-      'Valid identity proof'
+      'Age above 10 years',
+      'No other bank account',
+      'Simplified KYC process'
     ],
-    benefits: 'Zero balance account, RuPay debit card, insurance coverage',
+    benefits: 'Zero balance account, RuPay debit card, accident insurance cover of ₹1 lakh',
     documents: [
-      'Aadhaar Card (preferred)',
-      'Voter ID Card',
-      'Driving License',
-      'NREGA Job Card',
-      'Passport size photo'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'PAN Card', url: '/documents/pan_card.png' },
     ],
-    applicationProcess: [
-      'Visit nearest bank branch',
+    howToApply: [
+      'Visit nearest bank branch or Bank Mitra',
       'Fill account opening form',
       'Submit identity and address proof',
       'Get account opened immediately'
     ],
-    contactInfo: 'Website: pmjdy.gov.in',
+    contact: { name: 'Jan Dhan Yojana Helpdesk', email: 'support@pmjdy.gov.in' },
     keywords: ['bank account', 'jan dhan', 'financial inclusion', 'zero balance', 'insurance']
   },
   {
@@ -186,18 +171,16 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: 'Monthly pension of ₹3,000 after 60 years',
     documents: [
-      'Aadhaar Card',
-      'Bank Account Details',
-      'Mobile Number',
-      'Income Proof'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'Income Certificate', url: '/documents/income_certificate.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Visit CSC center',
       'Fill enrollment form',
       'Make first contribution',
       'Get scheme acknowledgment'
     ],
-    contactInfo: 'Helpline: 14434 | Website: maandhan.in',
+    contact: { name: 'Maan-dhan Helpdesk', number: '14434', email: 'support@maandhan.in' },
     keywords: ['pension', 'retirement', 'shram yogi', 'unorganized worker', 'old age']
   },
   {
@@ -214,20 +197,18 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: 'Tuition fees, maintenance allowance, and other educational expenses',
     documents: [
-      'Caste Certificate',
-      'Income Certificate',
-      'Admission Certificate',
-      'Aadhaar Card',
-      'Bank Account Details',
-      'Previous year marksheet'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'Caste Certificate', url: '/documents/caste_certificate.png' },
+        { name: 'Income Certificate', url: '/documents/income_certificate.png' },
+        { name: 'Educational Certificates', url: '/documents/educational_certificates.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Apply online on National Scholarship Portal',
       'Fill personal and academic details',
       'Upload required documents',
       'Submit application before deadline'
     ],
-    contactInfo: 'Website: scholarships.gov.in',
+    contact: { name: 'National Scholarship Portal', email: 'helpdesk@nsp.gov.in' },
     keywords: ['scholarship', 'education', 'student', 'sc st obc', 'study', 'fees']
   },
   {
@@ -244,20 +225,16 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: 'Loans up to ₹10 lakh without collateral',
     documents: [
-      'Aadhaar Card',
-      'PAN Card',
-      'Business Plan',
-      'Bank Statements',
-      'Income Proof',
-      'Business Registration (if any)'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
+        { name: 'PAN Card', url: '/documents/pan_card.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Prepare business plan',
       'Visit bank or NBFC',
       'Submit loan application with documents',
       'Get loan approval and disbursement'
     ],
-    contactInfo: 'Website: mudra.org.in',
+    contact: { name: 'MUDRA Helpdesk', email: 'support@mudra.org.in' },
     keywords: ['loan', 'business', 'mudra', 'entrepreneur', 'micro finance', 'startup']
   },
   {
@@ -274,18 +251,15 @@ export const welfareSchemes: WelfareScheme[] = [
     ],
     benefits: '₹5,000 in three installments during pregnancy and after delivery',
     documents: [
-      'Aadhaar Card',
-      'MCP Card (Mother and Child Protection)',
-      'Bank Account Details',
-      'JSY Card (if available)'
+        { name: 'Aadhaar Card', url: '/documents/aadhar_card.png' },
     ],
-    applicationProcess: [
+    howToApply: [
       'Register at Anganwadi Center/Health facility',
       'Get antenatal check-ups as scheduled',
       'Fulfill conditions for each installment',
       'Receive direct benefit transfer in bank account'
     ],
-    contactInfo: 'Website: pmmvy.gov.in',
+    contact: { name: 'PMMVY Helpdesk', email: 'support@pmmvy.gov.in' },
     keywords: ['maternity', 'pregnancy', 'women', 'child', 'mother', 'delivery', 'cash benefit']
   }
 ];

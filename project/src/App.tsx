@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { checkAndNotifyReminders, requestNotificationPermission } from './utils/reminderManager';
 import { Volume2, Globe, FileText, Sparkles } from 'lucide-react';
-import VoiceInterfaceEnhanced from './components/VoiceInterfaceEnhanced';
-import CategorizedSchemes from './components/CategorizedSchemes';
-import MeeSevaCentersMap from './components/MeeSevaCentersMap';
 import LanguageSelector from './components/LanguageSelector';
-import StatusIndicator from './components/StatusIndicator';
 import DocumentViewer from './components/DocumentViewer';
 import ApplicationProcess from './components/ApplicationProcess';
 import SchemeDetails from './components/SchemeDetails';
@@ -12,9 +9,14 @@ import { Language, WelfareScheme } from './types';
 import { welfareSchemes } from './data/schemes';
 import { languages } from './data/languages';
 import { processUserQuery, detectLanguage } from './utils/aiProcessor';
+
 import TabView from './components/TabView';
 
 function App() {
+  useEffect(() => {
+    requestNotificationPermission();
+    checkAndNotifyReminders();
+  }, []);
   const [isListening, setIsListening] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(languages[0]);
   const [currentScheme, setCurrentScheme] = useState<WelfareScheme | null>(null);
@@ -29,19 +31,23 @@ function App() {
   const [showSchemeDetails, setShowSchemeDetails] = useState(false);
   const [selectedSchemeForDetails, setSelectedSchemeForDetails] = useState<WelfareScheme | null>(null);
 
+
+
   useEffect(() => {
-    // Initialize with welcome message
-    const welcomeMessage = selectedLanguage.code === 'hi' 
-      ? "नमस्कार! मैं VOXTEND हूं, आपका डिजिटल कल्याण सहायक। मैं आपको सरकारी योजनाओं के बारे में जानकारी देने में मदद करूंगा।"
-      : selectedLanguage.code === 'te'
-      ? "నమస్కారం! నేను VOXTEND, మీ డిజిటల్ కల్యాణ సహాయకుడిని. ప్రభుత్వ పథకాల గురించి మీకు సహాయం చేస్తాను."
-      : "Hello! I'm VOXTEND, your digital welfare companion. I'm here to help you access government welfare schemes easily.";
-    
-    setConversation([{
-      type: 'assistant',
-      text: welcomeMessage,
-      timestamp: new Date()
-    }]);
+    // Initialize with welcome message if no conversation exists
+    if (conversation.length === 0) {
+      const welcomeMessage = selectedLanguage.code === 'hi' 
+        ? "नमस्कार! मैं VOXTEND हूं, आपका डिजिटल कल्याण सहायक। मैं आपको सरकारी योजनाओं के बारे में जानकारी देने में मदद करूंगा।"
+        : selectedLanguage.code === 'te'
+        ? "నమస్కారం! నేను VOXTEND, మీ డిజిటల్ కల్యాణ సహాయకుడిని. ప్రభుత్వ పథకాల గురించి మీకు సహాయం చేస్తాను."
+        : "Hello! I'm VOXTEND, your digital welfare companion. I'm here to help you access government welfare schemes easily.";
+      
+      setConversation([{
+        type: 'assistant',
+        text: welcomeMessage,
+        timestamp: new Date()
+      }]);
+    }
   }, [selectedLanguage]);
 
   const handleVoiceInput = async (transcript: string) => {
@@ -67,8 +73,13 @@ function App() {
         }
       }
 
-      // Process the query
-      const response = await processUserQuery(transcript, selectedLanguage, welfareSchemes);
+      // Process the query with conversation history
+      const response = await processUserQuery(
+        transcript, 
+        selectedLanguage, 
+        welfareSchemes,
+        conversation // Pass the conversation history for context
+      );
       
       // Add assistant response to conversation
       const assistantMessage = {
@@ -97,6 +108,7 @@ function App() {
       setIsProcessing(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50 relative overflow-hidden">

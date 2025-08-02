@@ -1,4 +1,12 @@
 import { Language, WelfareScheme, AIResponse } from '../types';
+import { generateResponse } from './geminiClient';
+
+// Define conversation message type for better type safety
+type ConversationMessage = {
+  type: 'user' | 'assistant';
+  text: string;
+  timestamp: Date;
+};
 
 // Simple language detection based on script and common words
 export const detectLanguage = (text: string): Language | null => {
@@ -18,173 +26,98 @@ export const detectLanguage = (text: string): Language | null => {
   }
   
   // Check for Bengali script
-  if (/[\u0980-\u09FF]/.test(text)) {
+  if (/[ঀ-৿]/.test(text)) {
     return { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', speechCode: 'bn-IN' };
+  }
+
+  // Check for Urdu script (Arabic)
+  if (/[؀-ۿ]/.test(text)) {
+    return { code: 'ur', name: 'Urdu', nativeName: 'اردو', speechCode: 'ur-IN' };
+  }
+
+  // Check for Odia script
+  if (/[଀-୿]/.test(text)) {
+    return { code: 'or', name: 'Odia', nativeName: 'ଓଡ଼ିଆ', speechCode: 'or-IN' };
   }
   
   return null;
 };
 
-// Simulate AI processing with predefined responses
+// Process user query using Gemini AI
 export const processUserQuery = async (
   query: string, 
   language: Language, 
-  schemes: WelfareScheme[]
+  schemes: WelfareScheme[],
+  conversationHistory: ConversationMessage[] = []
 ): Promise<AIResponse> => {
-  // Simulate processing delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  const lowerQuery = query.toLowerCase();
-  
-  // Find relevant scheme based on keywords
-  const relevantScheme = schemes.find(scheme => 
-    scheme.keywords.some(keyword => 
-      lowerQuery.includes(keyword.toLowerCase())
-    )
-  );
-  
-  // Generate response based on query intent
-  if (relevantScheme) {
-    return generateSchemeResponse(relevantScheme, language, lowerQuery);
-  }
-  
-  // Handle general queries
-  if (lowerQuery.includes('eligibility') || lowerQuery.includes('पात्रता') || lowerQuery.includes('అర్హత')) {
-    return generateEligibilityResponse(language);
-  }
-  
-  if (lowerQuery.includes('document') || lowerQuery.includes('दस्तावेज') || lowerQuery.includes('పత్రాలు')) {
-    return generateDocumentResponse(language);
-  }
-  
-  if (lowerQuery.includes('apply') || lowerQuery.includes('आवेदन') || lowerQuery.includes('దరఖాస్తు')) {
-    return generateApplicationResponse(language);
-  }
-  
-  // Default response
-  return generateDefaultResponse(language, schemes);
-};
+  try {
+    // Find relevant scheme based on keywords
+    const queryWords = query.toLowerCase().split(/\s+/);
+    const relevantScheme = schemes.find(scheme => 
+      queryWords.some(word => 
+        word.length > 2 && // Ignore short words
+        (scheme.name.toLowerCase().includes(word) ||
+        scheme.description.toLowerCase().includes(word))
+      )
+    );
 
-const generateSchemeResponse = (scheme: WelfareScheme, language: Language, query: string): AIResponse => {
-  if (language.code === 'hi') {
-    if (query.includes('पात्रता') || query.includes('eligible')) {
-      return {
-        text: `${scheme.name} के लिए पात्रता: ${scheme.eligibilityDetails.join(', ')}। क्या आप इन शर्तों को पूरा करते हैं?`,
-        scheme
-      };
+    // Get the last 5 messages for context (to avoid too much history)
+    const recentMessages = conversationHistory.slice(-5);
+    
+    // Create a context string from recent messages
+    const context = recentMessages.map(msg => 
+      `${msg.type === 'user' ? 'User' : 'Assistant'}: ${msg.text}`
+    ).join('\n');
+    
+    // Add the current query to the context
+    const fullContext = context ? `${context}\nUser: ${query}` : `User: ${query}`;
+
+    // Prepare the prompt with context and relevant scheme info
+    let prompt = fullContext;
+    
+    if (relevantScheme) {
+      prompt += `\n\nRelevant scheme information:
+      
+Name: ${relevantScheme.name}
+Description: ${relevantScheme.description}
+Eligibility: ${relevantScheme.eligibilityDetails.join(', ')}
+Documents Required: ${relevantScheme.documents.join(', ')}
+
+Please respond in ${language.name} language.`;
+    } else {
+      prompt += `\n\nPlease respond in ${language.name} language.`;
     }
-    if (query.includes('दस्तावेज') || query.includes('document')) {
-      return {
-        text: `${scheme.name} के लिए आवश्यक दस्तावेज: ${scheme.documents.join(', ')}। क्या आपके पास ये सभी दस्तावेज हैं?`,
-        scheme
-      };
-    }
+    
+    // Generate response using Gemini
+    const response = await generateResponse(prompt, language.code);
+
+    // Clean the response by removing asterisks for smoother TTS
+    const cleanedText = response.replace(/\*/g, '');
+
     return {
-      text: `${scheme.name} के बारे में: ${scheme.description}। लाभ: ${scheme.benefits}। क्या आपको इस योजना के बारे में और जानकारी चाहिए?`,
-      scheme
+      text: cleanedText,
+      scheme: relevantScheme || undefined
+    };
+  } catch (error) {
+    console.error('Error processing query with Gemini:', error);
+    
+    // Fallback to simple response if Gemini fails
+    const fallbackResponses: Record<string, string> = {
+      'hi': 'क्षमा करें, मुझे आपकी बात समझने में समस्या हुई। कृपया फिर से कोशिश करें।',
+      'te': 'క్షమించండి, మీ విన్నపాన్ని అర్థం చేసుకోవడంలో సమస్య ఏర్పడింది. దయచేసి మళ్లీ ప్రయత్నించండి.',
+      'ta': 'மன்னிக்கவும், உங்கள் கோரிக்கையைப் புரிந்துகொள்ள சிக்கல் ஏற்பட்டது. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+      'bn': 'দুঃখিত, আপনার অনুরোধ বোঝার সময় একটি সমস্যা হয়েছে। অনুগ্রহপূর্বক আবার চেষ্টা করুন।',
+      'ur': 'معذرت، آپ کی درخواست پر کارروائی کرنے میں ایک مسئلہ پیش آیا۔ براہ کرم دوبارہ کوشش کریں۔',
+      'or': 'ଦୁଃଖିତ, ଆପଣଙ୍କ ଅନୁରୋଧ ପ୍ରକ୍ରିୟାକରଣରେ ଏକ ସମସ୍ୟା ଦେଖାଗଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।',
+    };
+    
+    return {
+      text: fallbackResponses[language.code] || 'Sorry, I encountered an issue processing your request. Please try again.',
+      scheme: undefined
     };
   }
-  
-  if (language.code === 'te') {
-    if (query.includes('అర్హత') || query.includes('eligible')) {
-      return {
-        text: `${scheme.name} కోసం అర్హత: ${scheme.eligibilityDetails.join(', ')}. మీరు ఈ షరతులను తీర్చుతున్నారా?`,
-        scheme
-      };
-    }
-    if (query.includes('పత్రాలు') || query.includes('document')) {
-      return {
-        text: `${scheme.name} కోసం అవసరమైన పత్రాలు: ${scheme.documents.join(', ')}. మీ దగ్గర ఈ పత్రాలన్నీ ఉన్నాయా?`,
-        scheme
-      };
-    }
-    return {
-      text: `${scheme.name} గురించి: ${scheme.description}. ప్రయోజనాలు: ${scheme.benefits}. ఈ పథకం గురించి మరింత సమాచారం కావాలా?`,
-      scheme
-    };
-  }
-  
-  // English
-  if (query.includes('eligib')) {
-    return {
-      text: `Eligibility for ${scheme.name}: ${scheme.eligibilityDetails.join(', ')}. Do you meet these criteria?`,
-      scheme
-    };
-  }
-  if (query.includes('document')) {
-    return {
-      text: `Required documents for ${scheme.name}: ${scheme.documents.join(', ')}. Do you have all these documents?`,
-      scheme
-    };
-  }
-  return {
-    text: `About ${scheme.name}: ${scheme.description}. Benefits: ${scheme.benefits}. Would you like to know more about this scheme?`,
-    scheme
-  };
 };
 
-const generateEligibilityResponse = (language: Language): AIResponse => {
-  if (language.code === 'hi') {
-    return {
-      text: 'पात्रता जांचने के लिए कृपया बताएं कि आप किस योजना के बारे में जानना चाहते हैं? जैसे PM-KISAN, आयुष्मान भारत, या उज्ज्वला योजना।'
-    };
-  }
-  if (language.code === 'te') {
-    return {
-      text: 'అర్హత తనిఖీ చేయడానికి దయచేసి మీరు ఏ పథకం గురించి తెలుసుకోవాలనుకుంటున్నారో చెప్పండి? PM-KISAN, ఆయుష్మాన్ భారత్, లేదా ఉజ్జ్వల పథకం వంటివి.'
-    };
-  }
-  return {
-    text: 'To check eligibility, please tell me which scheme you want to know about. For example: PM-KISAN, Ayushman Bharat, or Ujjwala Yojana.'
-  };
-};
 
-const generateDocumentResponse = (language: Language): AIResponse => {
-  if (language.code === 'hi') {
-    return {
-      text: 'आवश्यक दस्तावेजों की जानकारी के लिए कृपया बताएं कि आप किस योजना के लिए आवेदन करना चाहते हैं। अधिकांश योजनाओं के लिए आधार कार्ड, बैंक खाता विवरण और आय प्रमाण पत्र आवश्यक होते हैं।'
-    };
-  }
-  if (language.code === 'te') {
-    return {
-      text: 'అవసరమైన పత్రాల సమాచారం కోసం దయచేసి మీరు ఏ పథకం కోసం దరఖాస్తు చేయాలనుకుంటున్నారో చెప్పండి. చాలా పథకాలకు ఆధార్ కార్డ్, బ్యాంక్ ఖాతా వివరాలు మరియు ఆదాయ ప్రమాణ పత్రం అవసరం.'
-    };
-  }
-  return {
-    text: 'For document requirements, please tell me which scheme you want to apply for. Most schemes require Aadhaar Card, Bank Account details, and Income Certificate.'
-  };
-};
-
-const generateApplicationResponse = (language: Language): AIResponse => {
-  if (language.code === 'hi') {
-    return {
-      text: 'आवेदन प्रक्रिया के लिए कृपया बताएं कि आप किस योजना के लिए आवेदन करना चाहते हैं। मैं आपको चरणबद्ध तरीके से पूरी प्रक्रिया बताऊंगा।'
-    };
-  }
-  if (language.code === 'te') {
-    return {
-      text: 'దరఖాస్తు ప్రక్రియ కోసం దయచేసి మీరు ఏ పథకం కోసం దరఖాస్తు చేయాలనుకుంటున్నారో చెప్పండి. నేను మీకు దశల వారీగా మొత్తం ప్రక్రియను వివరిస్తాను.'
-    };
-  }
-  return {
-    text: 'For the application process, please tell me which scheme you want to apply for. I will guide you through the complete step-by-step process.'
-  };
-};
-
-const generateDefaultResponse = (language: Language, schemes: WelfareScheme[]): AIResponse => {
-  const popularSchemes = schemes.slice(0, 3).map(s => s.name).join(', ');
-  
-  if (language.code === 'hi') {
-    return {
-      text: `मैं आपको सरकारी योजनाओं के बारे में जानकारी दे सकता हूं। कुछ लोकप्रिय योजनाएं हैं: ${popularSchemes}। आप किस योजना के बारे में जानना चाहते हैं?`
-    };
-  }
-  if (language.code === 'te') {
-    return {
-      text: `నేను మీకు ప్రభుత్వ పథకాల గురించి సమాచారం ఇవ్వగలను. కొన్ని ప్రముఖ పథకాలు: ${popularSchemes}. మీరు ఏ పథకం గురించి తెలుసుకోవాలనుకుంటున్నారు?`
-    };
-  }
-  return {
-    text: `I can help you with information about government welfare schemes. Some popular schemes include: ${popularSchemes}. Which scheme would you like to know about?`
-  };
-};
+// Export the type for use in other files
+export type { ConversationMessage };

@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
-import { Calendar, Users, MapPin, ArrowRight, Star, Timer } from 'lucide-react';
+import { addReminder } from '../utils/reminderManager';
+import { Users, MapPin, Timer } from 'lucide-react';
 import { WelfareScheme, Language } from '../types';
+import SchemeDetails from './SchemeDetails';
+
 
 interface CategorizedSchemesProps {
   schemes: WelfareScheme[];
   selectedLanguage: Language;
-  onSchemeSelect: (scheme: WelfareScheme) => void;
-}
-
-interface SchemeDeadline {
-  schemeId: string;
-  deadline: Date;
 }
 
 // Mock deadlines for demonstration
-const mockDeadlines: SchemeDeadline[] = [
+const mockDeadlines: { schemeId: string; deadline: Date }[] = [
   { schemeId: 'pm-kisan', deadline: new Date('2025-08-30') },
   { schemeId: 'ayushman-bharat', deadline: new Date('2025-09-15') },
   { schemeId: 'ujjwala', deadline: new Date('2025-07-31') },
@@ -29,19 +26,26 @@ const categories = [
   'Employment',
   'Social Security',
   'Financial Inclusion',
-  'All'
+  'All',
 ];
 
 const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
   schemes,
   selectedLanguage,
-  onSchemeSelect
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedScheme, setSelectedScheme] = useState<WelfareScheme | null>(null);
 
-  const filteredSchemes = selectedCategory === 'All'
-    ? schemes
-    : schemes.filter(scheme => scheme.category === selectedCategory);
+  const filteredSchemes = schemes.filter(scheme => {
+    const categoryMatch = selectedCategory === 'All' || scheme.category === selectedCategory;
+    const searchMatch = (
+      scheme.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      scheme.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      scheme.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    return categoryMatch && searchMatch;
+  });
 
   const getDaysUntilDeadline = (schemeId: string): number | null => {
     const deadline = mockDeadlines.find(d => d.schemeId === schemeId);
@@ -49,7 +53,7 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
     
     const today = new Date();
     const daysLeft = Math.ceil((deadline.deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return daysLeft;
+    return daysLeft > 0 ? daysLeft : 0;
   };
 
   const isUrgent = (days: number | null): boolean => {
@@ -57,25 +61,38 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
-      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-        <Calendar className="w-5 h-5 mr-2 text-orange-600" />
-        {selectedLanguage.code === 'hi' ? 'श्रेणीवार योजनाएं' :
-         selectedLanguage.code === 'te' ? 'వర్గాల వారీగా పథకాలు' :
-         'Schemes by Category'}
-      </h3>
-
-      {/* Category Navigation */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm -mx-6 px-6 py-4 border-b border-gray-200">
-        <div className="flex overflow-x-auto hide-scrollbar space-x-2">
-          {categories.map(category => (
+    <div>
+      {/* Category and Search Bar */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-gray-800">
+            {selectedLanguage.code === 'hi' ? 'योजनाएं ब्राउज़ करें' :
+             selectedLanguage.code === 'te' ? 'పథకాలను బ్రౌజ్ చేయండి' :
+             'Browse Schemes'}
+          </h3>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={
+                selectedLanguage.code === 'hi' ? 'योजना खोजें...' :
+                selectedLanguage.code === 'te' ? 'పథకాల కోసం శోధించండి...' :
+                'Search schemes...'
+              }
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-4 pr-10 py-2 border rounded-full w-64 focus:ring-2 focus:ring-indigo-400 transition-all"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`px-4 py-2 text-sm font-semibold rounded-full transition-colors ${
                 selectedCategory === category
-                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
             >
               {selectedLanguage.code === 'hi' ? category : 
@@ -86,86 +103,96 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
         </div>
       </div>
 
-      {/* Selected Category Title */}
-      <div className="mt-4 mb-6">
-        <h4 className="text-lg font-semibold text-gray-800">
-          {selectedCategory === 'All' ? (
-            selectedLanguage.code === 'hi' ? 'सभी योजनाएं' :
-            selectedLanguage.code === 'te' ? 'అన్ని పథకాలు' :
-            'All Schemes'
-          ) : (
-            `${selectedCategory} ${
-              selectedLanguage.code === 'hi' ? 'योजनाएं' :
-              selectedLanguage.code === 'te' ? 'పథకాలు' :
-              'Schemes'
-            }`
-          )}
-        </h4>
-      </div>
+      {/* Results Section */}
+      <div>
+        <div className="mt-4 mb-6">
+          <h4 className="text-lg font-semibold text-gray-800">
+            {selectedCategory === 'All' ? (
+              selectedLanguage.code === 'hi' ? 'सभी योजनाएं' :
+              selectedLanguage.code === 'te' ? 'అన్ని పథకాలు' :
+              'All Schemes'
+            ) : (
+              `${selectedCategory} ${
+                selectedLanguage.code === 'hi' ? 'योजनाएं' :
+                selectedLanguage.code === 'te' ? 'పథకాలు' :
+                'Schemes'
+              }`
+            )}
+          </h4>
+        </div>
 
-      {/* Schemes List */}
-      <div className="space-y-4">
-        {filteredSchemes.map((scheme) => {
-          const daysLeft = getDaysUntilDeadline(scheme.id);
-          const urgent = isUrgent(daysLeft);
-
-          return (
-            <button
-              key={scheme.id}
-              onClick={() => onSchemeSelect(scheme)}
-              className={`w-full text-left p-5 rounded-xl transition-all duration-300 border ${
-                urgent
-                  ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-200 hover:border-red-300'
-                  : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 hover:border-orange-300'
-              } hover:shadow-lg group`}
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <h4 className="font-bold text-gray-800 text-sm leading-tight pr-2">
-                    {scheme.name}
-                    {urgent && (
-                      <span className="ml-2 text-xs px-2 py-1 bg-red-500 text-white rounded-full">
-                        {daysLeft} days left
-                      </span>
-                    )}
-                  </h4>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-colors flex-shrink-0" />
-                </div>
-
-                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            {filteredSchemes.map((scheme) => (
+              <div key={scheme.id} onClick={() => setSelectedScheme(scheme)} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col overflow-hidden border border-gray-200 group p-5 cursor-pointer">
+                <h3 className="font-bold text-gray-800 text-lg leading-tight">
+                  {scheme.name}
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed mt-2 flex-grow">
                   {scheme.description}
                 </p>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-200">
-                  <div className="flex items-center">
-                    <Users className="w-3 h-3 mr-1" />
-                    <span className="truncate max-w-24">{scheme.targetGroup}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    <span>{scheme.category}</span>
-                  </div>
+                <div className="mt-4 pt-4 border-t border-gray-100 space-y-3 text-sm">
+                    <div className="flex items-center text-gray-700">
+                      <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                      <span>{scheme.targetGroup}</span>
+                    </div>
+                    <div className="flex items-center text-gray-700">
+                      <MapPin className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                      <span>{scheme.category}</span>
+                    </div>
+                  {scheme.benefits && (
+                    <div className="flex items-center text-green-700">
+                        <span className="text-xl mr-2">💰</span>
+                        <span>{scheme.benefits}</span>
+                    </div>
+                  )}
                 </div>
-                
-                {scheme.benefits && (
-                  <div className="text-xs text-green-600 font-medium">
-                    <span className="inline-flex items-center">
-                      💰 <span className="ml-1">{scheme.benefits}</span>
-                    </span>
-                  </div>
-                )}
 
-                {daysLeft && daysLeft > 0 && !urgent && (
-                  <div className="flex items-center text-xs text-blue-500">
-                    <Timer className="w-3 h-3 mr-1" />
-                    <span>Deadline: {daysLeft} days left</span>
-                  </div>
-                )}
+                <div className="mt-4 flex justify-between items-center">
+                  {getDaysUntilDeadline(scheme.id) !== null && getDaysUntilDeadline(scheme.id)! > 0 && (
+                      <div className={`flex items-center text-xs ${isUrgent(getDaysUntilDeadline(scheme.id)) ? 'text-red-600 font-semibold' : 'text-blue-600'}`}>
+                        <Timer className="w-4 h-4 mr-1.5" />
+                        <span>{getDaysUntilDeadline(scheme.id)} days left</span>
+                      </div>
+                  )}
+                   <button
+                      className="text-sm bg-indigo-500 text-white py-2 px-5 rounded-full hover:bg-indigo-600 transition-colors font-semibold ml-auto"
+                      onClick={() => {
+                        const deadlineObj = mockDeadlines.find((d: any) => d.schemeId === scheme.id);
+                        if (deadlineObj) {
+                          addReminder({
+                            schemeId: scheme.id,
+                            schemeName: scheme.name,
+                            deadline: deadlineObj.deadline.toISOString(),
+                          });
+                        } else {
+                          // If no deadline, maybe add a general reminder?
+                          // For now, we just disable it if no deadline is found.
+                          alert('No deadline found for this scheme.');
+                        }
+                      }}
+                    >
+                      {selectedLanguage.code === 'hi' ? 'बाद में आवेदन करें' : selectedLanguage.code === 'te' ? 'తరువాత దరఖాస్తు చేయండి' : 'Apply Later'}
+                    </button>
+                </div>
               </div>
-            </button>
-          );
-        })}
+            ))}
+            
+            {filteredSchemes.length === 0 && (
+              <div className="text-center col-span-full p-10">
+                <p>No schemes found. Try a different category or search query.</p>
+              </div>
+            )}
+          </div>
       </div>
+
+      {selectedScheme && (
+        <SchemeDetails 
+          scheme={selectedScheme} 
+          selectedLanguage={selectedLanguage} 
+          onClose={() => setSelectedScheme(null)} 
+        />
+      )}
     </div>
   );
 };

@@ -30,6 +30,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastSpokenTextRef = useRef<string | null>(null);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -83,12 +84,15 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
   }, [selectedLanguage, onListeningChange, onVoiceInput]);
 
   // Text-to-Speech functionality
-  const speakText = async (text: string) => {
-    try {
-      if (isSpeaking) {
-        stopSpeaking();
-      }
+  const [ttsError, setTtsError] = useState<string | null>(null);
 
+  const speakText = async (text: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    try {
+      setTtsError(null);
       const response = await fetch('http://localhost:5000/api/tts', {
         method: 'POST',
         headers: {
@@ -107,10 +111,6 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
@@ -121,9 +121,19 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       };
       
       await audio.play();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in text-to-speech:', error);
       setIsSpeaking(false);
+      if (error.name === 'AbortError') {
+        // This can happen if the user stops the speech before it starts.
+        // We can safely ignore it.
+        return;
+      }
+      if (error?.name === 'NotAllowedError') {
+        setTtsError('Tap the Speak button to allow audio playback.');
+      } else {
+        setTtsError('Text-to-speech failed.');
+      }
     }
   };
 
@@ -135,10 +145,10 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
     }
   };
 
-  // Automatically speak the response text when it changes
   useEffect(() => {
-    if (responseText && !isListening && !isProcessing) {
+    if (responseText && responseText !== lastSpokenTextRef.current && !isListening && !isProcessing) {
       speakText(responseText);
+      lastSpokenTextRef.current = responseText;
     }
   }, [responseText, isListening, isProcessing]);
 
@@ -199,6 +209,9 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
             )}
           </button>
         </>
+      )}
+      {ttsError && (
+        <div className="text-red-500 text-xs mt-2">{ttsError}</div>
       )}
     </div>
   );

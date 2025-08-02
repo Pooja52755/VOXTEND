@@ -60,5 +60,17 @@ export const languages: Language[] = [
     name: 'Punjabi',
     nativeName: 'ਪੰਜਾਬੀ',
     speechCode: 'pa-IN'
-  }
+  },
+  {
+    code: 'ur',
+    name: 'Urdu',
+    nativeName: 'اردو',
+    speechCode: 'ur-IN',
+  },
+  {
+    code: 'or',
+    name: 'Odia',
+    nativeName: 'ଓଡ଼ିଆ',
+    speechCode: 'or-IN',
+  },
 ];

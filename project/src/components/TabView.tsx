@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Mic, FileText, MapPin, Volume2 } from 'lucide-react';
-import Tabs from './Tabs.jsx';
+import Tabs from './Tabs.tsx';
 import VoiceInterfaceEnhanced from './VoiceInterfaceEnhanced';
 import CategorizedSchemes from './CategorizedSchemes';
 import MeeSevaCentersMap from './MeeSevaCentersMap';
+import LatestNews from './LatestNews';
 import { Language, WelfareScheme } from '../types';
 
 interface TabViewProps {
@@ -14,7 +15,7 @@ interface TabViewProps {
   isProcessing: boolean;
   responseText?: string;
   schemes: WelfareScheme[];
-  onSchemeSelect: (scheme: WelfareScheme) => void;
+
   conversation: Array<{
     type: 'user' | 'assistant';
     text: string;
@@ -30,7 +31,7 @@ const TabView: React.FC<TabViewProps> = ({
   isProcessing,
   responseText,
   schemes,
-  onSchemeSelect,
+
   conversation
 }) => {
   const [activeTab, setActiveTab] = useState('voice');
@@ -56,6 +57,13 @@ const TabView: React.FC<TabViewProps> = ({
              selectedLanguage.code === 'te' ? 'మీసేవా కేంద్రాలు' : 
              'MeeSeva Centers',
       icon: <MapPin className="w-4 h-4" />
+    },
+    {
+      id: 'news',
+      label: selectedLanguage.code === 'hi' ? 'नवीनतम समाचार' :
+             selectedLanguage.code === 'te' ? 'తాజా వార్తలు' :
+             'Latest News',
+      icon: <span className="w-4 h-4">📰</span>
     }
   ];
 
@@ -126,7 +134,6 @@ const TabView: React.FC<TabViewProps> = ({
           <CategorizedSchemes
             schemes={schemes}
             selectedLanguage={selectedLanguage}
-            onSchemeSelect={onSchemeSelect}
           />
         )}
 
@@ -134,6 +141,9 @@ const TabView: React.FC<TabViewProps> = ({
           <MeeSevaCentersMap
             selectedLanguage={selectedLanguage}
           />
+        )}
+        {activeTab === 'news' && (
+          <LatestNews />
         )}
       </div>
     </div>

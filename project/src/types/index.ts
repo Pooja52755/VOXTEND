@@ -13,9 +13,9 @@ export interface WelfareScheme {
   targetGroup: string;
   eligibilityDetails: string[];
   benefits: string;
-  documents: string[];
-  applicationProcess: string[];
-  contactInfo: string;
+  documents: { name: string; url: string; template_url?: string }[];
+  howToApply: string[];
+  contact: { name: string; number?: string; email?: string };
   keywords: string[];
 }
 
