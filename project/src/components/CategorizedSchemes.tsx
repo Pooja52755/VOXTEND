@@ -17,22 +17,141 @@ const mockDeadlines: { schemeId: string; deadline: Date }[] = [
   { schemeId: 'ujjwala', deadline: new Date('2025-07-31') },
 ];
 
-const categories = [
-  'Agriculture',
-  'Healthcare',
-  'Education',
-  'Housing',
-  'Energy',
-  'Employment',
-  'Social Security',
-  'Financial Inclusion',
-  'All',
-];
+const getCategoryTranslations = (lang: string) => ({
+  'All': {
+    en: 'All',
+    hi: 'सभी',
+    te: 'అన్నీ',
+    ta: 'அனைத்தும்',
+    bn: 'সব',
+    mr: 'सर्व',
+    gu: 'બધા',
+    kn: 'ಎಲ್ಲಾ',
+    ml: 'എല്ലാം',
+    pa: 'ਸਾਰੇ',
+    or: 'ସମସ୍ତ',
+    ur: 'سب'
+  },
+  'Agriculture': {
+    en: 'Agriculture',
+    hi: 'कृषि',
+    te: 'వ్యవసాయం',
+    ta: 'விவசாயம்',
+    bn: 'কৃষি',
+    mr: 'शेती',
+    gu: 'ખેતી',
+    kn: 'ಕೃಷಿ',
+    ml: 'കാർഷികം',
+    pa: 'ਖੇਤੀਬਾੜੀ',
+    or: 'କୃଷି',
+    ur: 'زراعت'
+  },
+  'Healthcare': {
+    en: 'Healthcare',
+    hi: 'स्वास्थ्य सेवा',
+    te: 'ఆరోగ్య సంరక్షణ',
+    ta: 'ஆரோக்கிய பராமரிப்பு',
+    bn: 'স্বাস্থ্যসেবা',
+    mr: 'आरोग्यसेवा',
+    gu: 'આરોગ્યસેવા',
+    kn: 'ಆರೋಗ್ಯ ಸೇವೆಗಳು',
+    ml: 'ആരോഗ്യസംരക്ഷണം',
+    pa: 'ਸਿਹਤ ਸੰਭਾਲ',
+    or: 'ସ୍ୱାସ୍ଥ୍ୟ ସେବା',
+    ur: 'صحت کی دیکھ بھال'
+  },
+  'Education': {
+    en: 'Education',
+    hi: 'शिक्षा',
+    te: 'విద్య',
+    ta: 'கல்வி',
+    bn: 'শিক্ষা',
+    mr: 'शिक्षण',
+    gu: 'શિક્ષણ',
+    kn: 'ಶಿಕ್ಷಣ',
+    ml: 'വിദ്യാഭ്യാസം',
+    pa: 'ਸਿੱਖਿਆ',
+    or: 'ଶିକ୍ଷା',
+    ur: 'تعلیم'
+  },
+  'Housing': {
+    en: 'Housing',
+    hi: 'आवास',
+    te: 'వసతి',
+    ta: 'வீடமைப்பு',
+    bn: 'বাসস্থান',
+    mr: 'गृहनिर्माण',
+    gu: 'રહેણાંક',
+    kn: 'ವಸತಿ',
+    ml: 'വസതി',
+    pa: 'ਰਿਹਾਇਸ਼',
+    or: 'ବାସସ୍ଥାନ',
+    ur: 'رہائش'
+  },
+  'Energy': {
+    en: 'Energy',
+    hi: 'ऊर्जा',
+    te: 'శక్తి',
+    ta: 'ஆற்றல்',
+    bn: 'শক্তি',
+    mr: 'ऊर्जा',
+    gu: 'ઊર્જા',
+    kn: 'ಶಕ್ತಿ',
+    ml: 'ഊർജ്ജം',
+    pa: 'ਊਰਜਾ',
+    or: 'ଶକ୍ତି',
+    ur: 'توانائی'
+  },
+  'Employment': {
+    en: 'Employment',
+    hi: 'रोजगार',
+    te: 'ఉపాధి',
+    ta: 'தொழில்',
+    bn: 'চাকরি',
+    mr: 'रोजगार',
+    gu: 'રોજગારી',
+    kn: 'ಉದ್ಯೋಗ',
+    ml: 'ജോലി',
+    pa: 'ਰੁਜ਼ਗਾਰ',
+    or: 'କର୍ମସଂସ୍ଥାନ',
+    ur: 'ملازمت'
+  },
+  'Social Security': {
+    en: 'Social Security',
+    hi: 'सामाजिक सुरक्षा',
+    te: 'సామాజిక భద్రత',
+    ta: 'சமூக பாதுகாப்பு',
+    bn: 'সামাজিক সুরক্ষা',
+    mr: 'सामाजिक सुरक्षा',
+    gu: 'સામાજિક સુરક્ષા',
+    kn: 'ಸಾಮಾಜಿಕ ಭದ್ರತೆ',
+    ml: 'സാമൂഹ്യ സുരക്ഷ',
+    pa: 'ਸਮਾਜਿਕ ਸੁਰੱਖਿਆ',
+    or: 'ସାମାଜିକ ସୁରକ୍ଷା',
+    ur: 'سماجی تحفظ'
+  },
+  'Financial Inclusion': {
+    en: 'Financial Inclusion',
+    hi: 'वित्तीय समावेशन',
+    te: 'ఫైనాన్షియల్ ఇంక్లూజన్',
+    ta: 'நிதி உள்ளடக்கம்',
+    bn: 'আর্থিক অন্তর্ভুক্তি',
+    mr: 'आर्थिक समावेशन',
+    gu: 'ફાયનાન્સિયલ ઇન્ક્લુઝન',
+    kn: 'ಹಣಕಾಸು ಸೇರ್ಪಡೆ',
+    ml: 'ഫിനാൻഷ്യൽ ഇൻക്ലൂഷൻ',
+    pa: 'ਵਿੱਤੀ ਸ਼ਾਮਲੀਕਰਨ',
+    or: 'ଆର୍ଥିକ ସମାବେଶ',
+    ur: 'مالی شمولیت'
+  }
+});
 
 const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
   schemes,
   selectedLanguage,
 }) => {
+  const categoryTranslations = getCategoryTranslations(selectedLanguage.code);
+  const categories = Object.keys(categoryTranslations) as Array<keyof typeof categoryTranslations>;
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScheme, setSelectedScheme] = useState<WelfareScheme | null>(null);
@@ -107,17 +226,34 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
       <div>
         <div className="mt-4 mb-6">
           <h4 className="text-lg font-semibold text-gray-800">
-            {selectedCategory === 'All' ? (
-              selectedLanguage.code === 'hi' ? 'सभी योजनाएं' :
-              selectedLanguage.code === 'te' ? 'అన్ని పథకాలు' :
-              'All Schemes'
-            ) : (
-              `${selectedCategory} ${
-                selectedLanguage.code === 'hi' ? 'योजनाएं' :
+              {selectedCategory === 'All' ? (
+                selectedLanguage.code === 'hi' ? 'सभी योजनाएं' :
+                selectedLanguage.code === 'te' ? 'అన్ని పథకాలు' :
+                selectedLanguage.code === 'ta' ? 'அனைத்து திட்டங்கள்' :
+                selectedLanguage.code === 'bn' ? 'সমস্ত স্কিম' :
+                selectedLanguage.code === 'mr' ? 'सर्व योजना' :
+                selectedLanguage.code === 'gu' ? 'બધી યોજનાઓ' :
+                selectedLanguage.code === 'kn' ? 'ಎಲ್ಲಾ ಯೋಜನೆಗಳು' :
+                selectedLanguage.code === 'ml' ? 'എല്ലാ പദ്ധതികളും' :
+                selectedLanguage.code === 'pa' ? 'ਸਾਰੀਆਂ ਸਕੀਮਾਂ' :
+                selectedLanguage.code === 'or' ? 'ସମସ୍ତ ଯୋଜନା' :
+                selectedLanguage.code === 'ur' ? 'تمام اسکیمیں' :
+                'All Schemes'
+              ) : (
+                `${categoryTranslations[selectedCategory as keyof typeof categoryTranslations][selectedLanguage.code as keyof typeof categoryTranslations.All] || selectedCategory} ` +
+                (selectedLanguage.code === 'hi' ? 'योजनाएं' :
                 selectedLanguage.code === 'te' ? 'పథకాలు' :
-                'Schemes'
-              }`
-            )}
+                selectedLanguage.code === 'ta' ? 'த்திட்டங்கள்' :
+                selectedLanguage.code === 'bn' ? 'স্কিম' :
+                selectedLanguage.code === 'mr' ? 'योजना' :
+                selectedLanguage.code === 'gu' ? 'યોજનાઓ' :
+                selectedLanguage.code === 'kn' ? 'ಯೋಜನೆಗಳು' :
+                selectedLanguage.code === 'ml' ? 'പദ്ധതികൾ' :
+                selectedLanguage.code === 'pa' ? 'ਸਕੀਮਾਂ' :
+                selectedLanguage.code === 'or' ? 'ଯୋଜନା' :
+                selectedLanguage.code === 'ur' ? 'اسکیمیں' :
+                'Schemes')
+              )}
           </h4>
         </div>
 
@@ -152,7 +288,20 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
                   {getDaysUntilDeadline(scheme.id) !== null && getDaysUntilDeadline(scheme.id)! > 0 && (
                       <div className={`flex items-center text-xs ${isUrgent(getDaysUntilDeadline(scheme.id)) ? 'text-red-600 font-semibold' : 'text-blue-600'}`}>
                         <Timer className="w-4 h-4 mr-1.5" />
-                        <span>{getDaysUntilDeadline(scheme.id)} days left</span>
+                        <span>
+                        {selectedLanguage.code === 'hi' ? `${getDaysUntilDeadline(scheme.id)} दिन शेष` :
+                         selectedLanguage.code === 'te' ? `${getDaysUntilDeadline(scheme.id)} రోజులు మిగిలి ఉన్నాయి` :
+                         selectedLanguage.code === 'ta' ? `${getDaysUntilDeadline(scheme.id)} நாட்கள் மீதம்` :
+                         selectedLanguage.code === 'bn' ? `${getDaysUntilDeadline(scheme.id)} দিন বাকি` :
+                         selectedLanguage.code === 'mr' ? `${getDaysUntilDeadline(scheme.id)} दिवस शिल्लक` :
+                         selectedLanguage.code === 'gu' ? `${getDaysUntilDeadline(scheme.id)} દિવસ બાકી` :
+                         selectedLanguage.code === 'kn' ? `${getDaysUntilDeadline(scheme.id)} ದಿನಗಳು ಉಳಿದಿವೆ` :
+                         selectedLanguage.code === 'ml' ? `${getDaysUntilDeadline(scheme.id)} ദിവസം മാത്രം` :
+                         selectedLanguage.code === 'pa' ? `${getDaysUntilDeadline(scheme.id)} ਦਿਨ ਬਾਕੀ` :
+                         selectedLanguage.code === 'or' ? `${getDaysUntilDeadline(scheme.id)} ଦିନ ବାକି` :
+                         selectedLanguage.code === 'ur' ? `${getDaysUntilDeadline(scheme.id)} دن باقی ہیں` :
+                         `${getDaysUntilDeadline(scheme.id)} days left`}
+                      </span>
                       </div>
                   )}
                    <button
@@ -180,7 +329,20 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
             
             {filteredSchemes.length === 0 && (
               <div className="text-center col-span-full p-10">
-                <p>No schemes found. Try a different category or search query.</p>
+                <p>
+                  {selectedLanguage.code === 'hi' ? 'कोई योजना नहीं मिली। कोई अन्य श्रेणी या खोज प्रयास करें।' :
+                   selectedLanguage.code === 'te' ? 'పథకాలు కనుగొనబడలేదు. వేరే వర్గం లేదా శోధన ప్రయత్నించండి.' :
+                   selectedLanguage.code === 'ta' ? 'திட்டங்கள் எதுவும் கிடைக்கவில்லை. வேறு வகை அல்லது தேடல் முயற்சிக்கவும்.' :
+                   selectedLanguage.code === 'bn' ? 'কোন স্কিম পাওয়া যায়নি। অন্য কোন বিভাগ বা অনুসন্ধান চেষ্টা করুন।' :
+                   selectedLanguage.code === 'mr' ? 'कोणतीही योजना सापडली नाही. वेगळी श्रेणी किंवा शोध प्रश्न वापरून पहा.' :
+                   selectedLanguage.code === 'gu' ? 'કોઈ યોજના મળી નથી. અલગ શ્રેણી અથવા શોધ પ્રયાસ કરો.' :
+                   selectedLanguage.code === 'kn' ? 'ಯಾವುದೇ ಯೋಜನೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ. ಬೇರೆ ವರ್ಗ ಅಥವಾ ಹುಡುಕು ಪ್ರಯತ್ನಿಸಿ.' :
+                   selectedLanguage.code === 'ml' ? 'സ്കീമുകളൊന്നും കണ്ടെത്തിയില്ല. മറ്റൊരു വിഭാഗം അല്ലെങ്കിൽ തിരയൽ ശ്രമിക്കുക.' :
+                   selectedLanguage.code === 'pa' ? 'ਕੋਈ ਸਕੀਮ ਨਹੀਂ ਮਿਲੀ। ਕੋਈ ਹੋਰ ਸ਼੍ਰੇਣੀ ਜਾਂ ਖੋਜ ਕੁਐਰੀ ਅਜ਼ਮਾਓ।' :
+                   selectedLanguage.code === 'or' ? 'କୌଣସି ଯୋଜନା ମିଳିଲା ନାହିଁ। ଏକ ଭିନ୍ନ ବର୍ଗ କିମ୍ବା ଖୋଜ ପ୍ରଚେଷ୍ଟା କରନ୍ତୁ।' :
+                   selectedLanguage.code === 'ur' ? 'کوئی اسکیم نہیں ملی۔ کوئی مختلف زمرہ یا تلاش کی کوشش کریں۔' :
+                   'No schemes found. Try a different category or search query.'}
+                </p>
               </div>
             )}
           </div>
@@ -190,7 +352,15 @@ const CategorizedSchemes: React.FC<CategorizedSchemesProps> = ({
         <SchemeDetails 
           scheme={selectedScheme} 
           selectedLanguage={selectedLanguage} 
-          onClose={() => setSelectedScheme(null)} 
+          onClose={() => setSelectedScheme(null)}
+          onViewDocuments={(schemeId: string) => {
+            // Implementation for viewing documents
+            console.log(`Viewing documents for scheme: ${schemeId}`);
+          }}
+          onViewProcess={(schemeId: string) => {
+            // Implementation for viewing application process
+            console.log(`Viewing application process for scheme: ${schemeId}`);
+          }}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileText, Phone, AlertTriangle } from 'lucide-react';
+import { X, FileText, Phone, AlertTriangle, Download, Clock } from 'lucide-react';
 import { WelfareScheme, Language } from '../types';
 import { generateResponse } from '../utils/geminiClient';
 
@@ -7,12 +7,16 @@ interface SchemeDetailsProps {
   scheme: WelfareScheme;
   selectedLanguage: Language;
   onClose: () => void;
+  onViewDocuments: () => void;
+  onViewProcess: () => void;
 }
 
 const SchemeDetails: React.FC<SchemeDetailsProps> = ({
   scheme,
   selectedLanguage,
-  onClose
+  onClose,
+  onViewDocuments,
+  onViewProcess
 }) => {
   const [translatedScheme, setTranslatedScheme] = useState<WelfareScheme>(scheme);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -69,6 +73,24 @@ const SchemeDetails: React.FC<SchemeDetailsProps> = ({
                   <p className="text-blue-100">{scheme.category}</p>
                 </div>
               </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                <button 
+                  onClick={onViewDocuments}
+                  className="flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>View Documents</span>
+                </button>
+                <button 
+                  onClick={onViewProcess}
+                  className="flex items-center gap-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all"
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>Application Process</span>
+                </button>
+              </div>
               <button
                 onClick={onClose}
                 className="text-white hover:text-blue-200 text-2xl font-bold"
@@ -102,6 +124,35 @@ const SchemeDetails: React.FC<SchemeDetailsProps> = ({
                   Benefits
                 </h3>
                 <p className="text-gray-700 leading-relaxed">{isTranslating ? 'Translating...' : translatedScheme.benefits}</p>
+              </div>
+
+              {/* How to Apply */}
+              <div className="bg-gray-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                  <FileText className="w-5 h-5 mr-3 text-blue-600" />
+                  How to Apply
+                </h3>
+                <p className="text-gray-700 leading-relaxed mb-4">
+                  {isTranslating ? 'Translating...' : translatedScheme.howToApply}
+                </p>
+                
+                {/* Application Buttons */}
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <button 
+                    onClick={onViewDocuments}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>View Required Documents</span>
+                  </button>
+                  <button 
+                    onClick={onViewProcess}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all"
+                  >
+                    <Clock className="w-4 h-4" />
+                    <span>View Application Process</span>
+                  </button>
+                </div>
               </div>
 
               {/* How to Apply */}

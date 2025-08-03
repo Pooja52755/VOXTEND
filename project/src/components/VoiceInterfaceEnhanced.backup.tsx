@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Volume2, VolumeX, Loader2, AlertCircle } from 'lucide-react';
 import { Language } from '../types';
-import { getTranslation } from '../services/translationService';
 
 // Map of language codes to their display names
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -28,58 +27,10 @@ interface VoiceInterfaceEnhancedProps {
   responseText?: string;
 }
 
-// Define the SpeechRecognition interface
-declare class SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-}
-
-// Define the SpeechRecognitionEvent interface
-declare interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-
-// Define the SpeechRecognitionErrorEvent interface
-declare interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
-}
-
-// Define the SpeechRecognitionResultList interface
-declare interface SpeechRecognitionResultList {
-  readonly length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-}
-
-// Define the SpeechRecognitionResult interface
-declare interface SpeechRecognitionResult {
-  readonly isFinal: boolean;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
-}
-
-// Define the SpeechRecognitionAlternative interface
-declare interface SpeechRecognitionAlternative {
-  readonly transcript: string;
-  readonly confidence: number;
-}
-
-// Extend the global Window interface
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognitionEvent?: any;
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
   }
 }
 
@@ -89,7 +40,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
   onVoiceInput,
   selectedLanguage,
   isProcessing,
-  responseText = ''
+  responseText
 }) => {
   // State management
   const [browserSupport, setBrowserSupport] = useState({
@@ -102,7 +53,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
   const [currentLanguage, setCurrentLanguage] = useState<Language>(selectedLanguage);
   
   // Refs
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenTextRef = useRef<string | null>(null);
   const synthesisRef = useRef<SpeechSynthesis | null>(null);
@@ -114,29 +65,14 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       return () => clearTimeout(timer);
     }
   }, [lastError]);
-
-  // Stop speaking function
-  const stopSpeaking = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    
-    if (synthesisRef.current) {
-      synthesisRef.current.cancel();
-    }
-    
-    setIsSpeaking(false);
-    setIsAudioLoading(false);
-  }, []);
-
+  
   // Initialize speech recognition
   const initializeSpeechRecognition = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setBrowserSupport(prev => ({ ...prev, speechRecognition: false }));
       setLastError('Your browser does not support speech recognition.');
-      return null;
+      return;
     }
 
     const recognition = new SpeechRecognition();
@@ -149,7 +85,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       onListeningChange(true);
     };
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript;
       onVoiceInput(transcript);
     };
@@ -158,7 +94,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       onListeningChange(false);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       onListeningChange(false);
       setLastError(`Speech recognition error: ${event.error}`);
@@ -178,18 +114,13 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
     setIsAudioLoading(true);
     setLastError(null);
     
-    // Use the selected language code from props to ensure it's always up to date
-    const langToUse = selectedLanguage.code || currentLanguage.code || 'en';
-    
-    console.log('Speaking text in language:', langToUse, 'Text:', text);
-    
     try {
       const response = await fetch('http://localhost:5000/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
-          lang: langToUse  // Use the most up-to-date language code
+          lang: currentLanguage.code
         }),
       });
 
@@ -201,7 +132,6 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      // Create a new audio element and set it as the current one
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       
@@ -213,12 +143,12 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
           setIsSpeaking(true);
         };
         
-        audio.onerror = () => {
-          console.error('Audio playback error');
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
           setIsAudioLoading(false);
           setIsSpeaking(false);
           setLastError('Failed to play audio. Please try again.');
-          reject(new Error('Audio playback failed'));
+          reject(error);
         };
         
         audio.onended = () => {
@@ -248,41 +178,156 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
   // Update current language when selectedLanguage changes
   useEffect(() => {
     if (selectedLanguage.code !== currentLanguage.code) {
-      console.log('Language changed from', currentLanguage.code, 'to', selectedLanguage.code);
-      
-      // Stop any ongoing speech immediately
+      setCurrentLanguage(selectedLanguage);
       stopSpeaking();
       
-      // Update the current language state
-      setCurrentLanguage(selectedLanguage);
-      
-      // Reset last spoken text to ensure the new welcome message is spoken
-      lastSpokenTextRef.current = null;
-      
-      // Update speech recognition with the new language
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-          recognitionRef.current = initializeSpeechRecognition();
-        } catch (error) {
-          console.error('Error updating speech recognition language:', error);
+        recognitionRef.current.stop();
+        const newRecognition = initializeSpeechRecognition();
+        if (newRecognition) {
+          recognitionRef.current = newRecognition;
         }
       }
-      
-      // Get the welcome message in the new language
-      const welcomeMessage = getTranslation('welcome', selectedLanguage.code);
-      
-      // Update the response text to trigger speech synthesis in the new language
-      // This will be picked up by the response text effect
-      if (welcomeMessage) {
-        // Use a small timeout to ensure the speech recognition is properly updated
-        // before triggering the welcome message
-        setTimeout(() => {
-          onVoiceInput(welcomeMessage);
-        }, 300);
-      }
     }
-  }, [selectedLanguage, currentLanguage.code, stopSpeaking, initializeSpeechRecognition, onVoiceInput]);
+  }, [selectedLanguage, currentLanguage.code, stopSpeaking, initializeSpeechRecognition]);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setBrowserSupport(prev => ({ ...prev, speechRecognition: false }));
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = selectedLanguage.speechCode;
+
+    // For better mobile support
+    document.addEventListener('touchstart', () => {
+      if (isListening) {
+        recognition.start();
+      }
+    });
+
+    recognition.onstart = () => {
+      console.log('Speech recognition started');
+      onListeningChange(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[event.results.length - 1][0].transcript;
+      onVoiceInput(transcript);
+    };
+
+    recognition.onend = () => {
+      onListeningChange(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      onListeningChange(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [selectedLanguage, onListeningChange, onVoiceInput]);
+
+  // Text-to-Speech functionality
+  const speakText = useCallback(async (text: string) => {
+    if (!text) return;
+    
+    // Stop any ongoing speech
+    stopSpeaking();
+    
+    // Show loading state
+    setIsAudioLoading(true);
+    setLastError(null);
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          lang: currentLanguage.code
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'TTS request failed');
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      return new Promise<void>((resolve, reject) => {
+        if (!audio) return reject(new Error('Audio element not created'));
+        
+        audio.onloadeddata = () => {
+          setIsAudioLoading(false);
+          setIsSpeaking(true);
+        };
+        
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          setIsAudioLoading(false);
+          setIsSpeaking(false);
+          setLastError('Failed to play audio. Please try again.');
+          reject(error);
+        };
+        
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        };
+        
+        audio.play().catch(error => {
+          console.error('Audio play failed:', error);
+          setIsAudioLoading(false);
+          setIsSpeaking(false);
+          setLastError('Please allow audio playback to hear the response.');
+          reject(error);
+        });
+      });
+      
+    } catch (error: any) {
+      console.error('Error in text-to-speech:', error);
+      setIsAudioLoading(false);
+      setIsSpeaking(false);
+      setLastError(error.message || 'Failed to generate speech. Please try again.');
+      throw error;
+    }
+  }, [currentLanguage]);
+  
+  // Stop speaking function
+  const stopSpeaking = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    
+    if (synthesisRef.current) {
+      synthesisRef.current.cancel();
+    }
+    
+    setIsSpeaking(false);
+    setIsAudioLoading(false);
+  }, []);
 
   // Initialize speech recognition and synthesis
   useEffect(() => {
@@ -313,46 +358,19 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
 
   // Handle automatic speaking of responses
   useEffect(() => {
-    let isMounted = true;
-    
-    const speakResponse = async () => {
-      if (!responseText || responseText === lastSpokenTextRef.current || isListening || isProcessing) {
-        return;
-      }
-      
-      try {
-        // Stop any ongoing speech before starting new one
-        stopSpeaking();
-        
-        // Ensure we're using the latest language settings
-        if (recognitionRef.current) {
-          recognitionRef.current.lang = selectedLanguage.code;
-        }
-        
-        // Set the last spoken text before speaking to prevent duplicate speech
-        lastSpokenTextRef.current = responseText;
-        
-        // Add a small delay to ensure the previous speech is fully stopped
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Only speak if the component is still mounted and the response text hasn't changed
-        if (isMounted && responseText === lastSpokenTextRef.current) {
+    if (responseText && responseText !== lastSpokenTextRef.current && !isListening && !isProcessing) {
+      const speak = async () => {
+        try {
           await speakText(responseText);
+          lastSpokenTextRef.current = responseText;
+        } catch (error) {
+          console.error('Failed to speak response:', error);
         }
-      } catch (error) {
-        console.error('Failed to speak response:', error);
-        if (isMounted) {
-          setLastError('Failed to speak the response. Please try again.');
-        }
-      }
-    };
-    
-    speakResponse();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [responseText, isListening, isProcessing, speakText, selectedLanguage.code, stopSpeaking]);
+      };
+      
+      speak();
+    }
+  }, [responseText, isListening, isProcessing, speakText]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -364,40 +382,20 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
     };
   }, [stopSpeaking]);
 
-  // Start/stop listening functions
-  const startListening = useCallback(() => {
+  const startListening = () => {
     if (!recognitionRef.current || isProcessing) return;
     try {
       recognitionRef.current.start();
     } catch (error) {
       console.error('Error starting speech recognition:', error);
-      setLastError('Failed to start speech recognition. Please try again.');
     }
-  }, [isProcessing]);
+  };
 
-  const stopListening = useCallback(() => {
+  const stopListening = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-  }, []);
-
-  // Toggle listening state
-  const toggleListening = useCallback(() => {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  }, [isListening, startListening, stopListening]);
-
-  // Toggle speaking state
-  const toggleSpeaking = useCallback(() => {
-    if (isSpeaking || isAudioLoading) {
-      stopSpeaking();
-    } else if (responseText) {
-      speakText(responseText);
-    }
-  }, [isSpeaking, isAudioLoading, responseText, speakText, stopSpeaking]);
+  };
 
   // Get the current language name for display
   const currentLangName = LANGUAGE_NAMES[currentLanguage.code] || currentLanguage.name;
@@ -407,7 +405,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
       <div className="flex items-center space-x-4">
         {/* Microphone Button */}
         <button
-          onClick={toggleListening}
+          onClick={isListening ? stopListening : startListening}
           disabled={isProcessing || !browserSupport.speechRecognition}
           className={`p-3 rounded-full transition-all ${
             isListening
@@ -433,7 +431,7 @@ const VoiceInterfaceEnhanced: React.FC<VoiceInterfaceEnhancedProps> = ({
 
         {/* Speaker Button */}
         <button
-          onClick={toggleSpeaking}
+          onClick={isSpeaking ? stopSpeaking : () => responseText && speakText(responseText)}
           disabled={!responseText || isProcessing || !browserSupport.speechSynthesis}
           className={`p-3 rounded-full transition-all ${
             isSpeaking || isAudioLoading

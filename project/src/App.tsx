@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { checkAndNotifyReminders, requestNotificationPermission } from './utils/reminderManager';
-import { Volume2, Globe, FileText, Sparkles } from 'lucide-react';
+import { Volume2, Sparkles, Globe, FileText } from 'lucide-react';
 import LanguageSelector from './components/LanguageSelector';
 import DocumentViewer from './components/DocumentViewer';
+import { getTranslation, getCurrentLanguage, Language } from './services/translationService';
 import ApplicationProcess from './components/ApplicationProcess';
 import SchemeDetails from './components/SchemeDetails';
-import { Language, WelfareScheme } from './types';
+import { WelfareScheme } from './types';
 import { welfareSchemes } from './data/schemes';
 import { languages } from './data/languages';
 import { processUserQuery, detectLanguage } from './utils/aiProcessor';
 
 import TabView from './components/TabView';
+
 
 function App() {
   useEffect(() => {
@@ -18,7 +20,7 @@ function App() {
     checkAndNotifyReminders();
   }, []);
   const [isListening, setIsListening] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(languages[0]);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(getCurrentLanguage('en')!);
   const [currentScheme, setCurrentScheme] = useState<WelfareScheme | null>(null);
   const [conversation, setConversation] = useState<Array<{
     type: 'user' | 'assistant';
@@ -26,27 +28,61 @@ function App() {
     timestamp: Date;
   }>>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  // Response text for speech synthesis in VoiceInterfaceEnhanced
+  const [responseText, setResponseText] = useState('');
   const [showDocuments, setShowDocuments] = useState(false);
   const [showProcess, setShowProcess] = useState(false);
   const [showSchemeDetails, setShowSchemeDetails] = useState(false);
+  // Track the currently selected scheme for details view
   const [selectedSchemeForDetails, setSelectedSchemeForDetails] = useState<WelfareScheme | null>(null);
+  
+  // Force re-render when selectedSchemeForDetails changes to ensure proper updates
+  useEffect(() => {
+    if (selectedSchemeForDetails) {
+      setCurrentScheme(selectedSchemeForDetails);
+    }
+  }, [selectedSchemeForDetails]);
+  
+  // This effect ensures the welcome message is spoken when the language changes
+  useEffect(() => {
+    const welcomeMessage = getTranslation('welcome', selectedLanguage.code);
+    setResponseText(welcomeMessage);
+  }, [selectedLanguage]);
+
+  // Handle view documents
+  const handleViewDocuments = () => {
+    if (selectedSchemeForDetails) {
+      setCurrentScheme(selectedSchemeForDetails);
+      setShowDocuments(true);
+      setShowSchemeDetails(false);
+    }
+  };
+
+  // Handle view application process
+  const handleViewProcess = () => {
+    if (selectedSchemeForDetails) {
+      setCurrentScheme(selectedSchemeForDetails);
+      setShowProcess(true);
+      setShowSchemeDetails(false);
+    }
+  };
+
 
 
 
   useEffect(() => {
     // Initialize with welcome message if no conversation exists
     if (conversation.length === 0) {
-      const welcomeMessage = selectedLanguage.code === 'hi' 
-        ? "नमस्कार! मैं VOXTEND हूं, आपका डिजिटल कल्याण सहायक। मैं आपको सरकारी योजनाओं के बारे में जानकारी देने में मदद करूंगा।"
-        : selectedLanguage.code === 'te'
-        ? "నమస్కారం! నేను VOXTEND, మీ డిజిటల్ కల్యాణ సహాయకుడిని. ప్రభుత్వ పథకాల గురించి మీకు సహాయం చేస్తాను."
-        : "Hello! I'm VOXTEND, your digital welfare companion. I'm here to help you access government welfare schemes easily.";
+      const welcomeMessage = getTranslation('welcome', selectedLanguage.code);
       
       setConversation([{
         type: 'assistant',
         text: welcomeMessage,
         timestamp: new Date()
       }]);
+      
+      // Set responseText to trigger speech synthesis in VoiceInterfaceEnhanced
+      setResponseText(welcomeMessage);
     }
   }, [selectedLanguage]);
 
@@ -62,12 +98,13 @@ function App() {
     setConversation(prev => [...prev, userMessage]);
 
     setIsProcessing(true);
+    setResponseText(''); // Clear previous response text
 
     try {
       // Detect language if needed
       const detectedLang = detectLanguage(transcript);
       if (detectedLang && detectedLang.code !== selectedLanguage.code) {
-        const langFromList = languages.find(l => l.code === detectedLang.code);
+        const langFromList = languages.find((l: { code: string }) => l.code === detectedLang.code);
         if (langFromList) {
           setSelectedLanguage(langFromList);
         }
@@ -81,6 +118,7 @@ function App() {
         conversation // Pass the conversation history for context
       );
       
+      // Handle AI response
       // Add assistant response to conversation
       const assistantMessage = {
         type: 'assistant' as const,
@@ -88,6 +126,7 @@ function App() {
         timestamp: new Date()
       };
       setConversation(prev => [...prev, assistantMessage]);
+      setResponseText(response.text); // Set response text for speech synthesis
 
       // Update current scheme if relevant
       if (response.scheme) {
@@ -100,6 +139,7 @@ function App() {
         type: 'assistant' as const,
         text: selectedLanguage.code === 'hi' 
           ? "क्षमा करें, मुझे आपकी बात समझने में समस्या हुई। कृपया फिर से कोशिश करें।"
+          : selectedLanguage.code === 'te' ? 'క్షమించండి, మీ మాటలను అర్థం చేసుకోవడంలో నాకు సమస్య వచ్చింది. దయచేసి మళ్లీ ప్రయత్నించండి.'
           : "Sorry, I had trouble understanding. Please try again.",
         timestamp: new Date()
       };
@@ -153,22 +193,23 @@ function App() {
           isProcessing={isProcessing}
           responseText={conversation.length > 0 ? conversation[conversation.length - 1].text : undefined}
           schemes={welfareSchemes}
-          onSchemeSelect={(scheme) => {setSelectedSchemeForDetails(scheme); setShowSchemeDetails(true);}}
           conversation={conversation}
         />
 
         {/* Modals */}
-        {showDocuments && (
-          <DocumentViewer
-            documents={currentScheme?.documents || []}
+        {showDocuments && currentScheme && (
+          <DocumentViewer 
+            documents={currentScheme.documents?.map(doc => doc.url) || []}
             selectedLanguage={selectedLanguage}
             onClose={() => setShowDocuments(false)}
           />
         )}
 
-        {showProcess && (
+        {showProcess && currentScheme && (
           <ApplicationProcess
-            processSteps={currentScheme?.applicationProcess || []}
+            processSteps={Array.isArray((currentScheme as any).applicationProcess) 
+              ? (currentScheme as any).applicationProcess 
+              : []}
             selectedLanguage={selectedLanguage}
             onClose={() => setShowProcess(false)}
           />
@@ -178,17 +219,9 @@ function App() {
           <SchemeDetails
             scheme={selectedSchemeForDetails}
             selectedLanguage={selectedLanguage}
-            onClose={() => {setShowSchemeDetails(false); setSelectedSchemeForDetails(null);}}
-            onViewDocuments={() => {
-              setShowSchemeDetails(false);
-              setCurrentScheme(selectedSchemeForDetails);
-              setShowDocuments(true);
-            }}
-            onViewProcess={() => {
-              setShowSchemeDetails(false);
-              setCurrentScheme(selectedSchemeForDetails);
-              setShowProcess(true);
-            }}
+            onClose={() => setShowSchemeDetails(false)}
+            onViewDocuments={handleViewDocuments}
+            onViewProcess={handleViewProcess}
           />
         )}
       </div>
